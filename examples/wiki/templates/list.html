@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{.Title}}</title>
+</head>
+
+<body>
+    <h1>{{.Title}}</h1>
+    <form action="/" method="POST">
+        <div>
+            <label>New page</label><input type="text" name="title" />
+            <input type="submit" value="Create" />
+        </div>
+    </form>
+    <div>{{noescape .Body}}</div>
+</body>
+
+</html>

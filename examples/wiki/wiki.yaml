@@ -1,0 +1,71 @@
+openapi: 3.0.0
+info:
+  version: "1.0.0"
+  title: "Wiki"
+  description: "Simple wiki engine"
+servers:
+  - description: localhost
+    url: http://localhost:8000/
+paths:
+  /:
+    get:
+      summary: View a list of wiki pages
+      operationId: wiki.list
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Create new wiki page
+      operationId: wiki.create
+      responses:
+        "200":
+          description: OK
+  /view/{title}:
+    parameters:
+      - $ref: "#/components/parameters/title"
+    get:
+      summary: View a wiki page
+      operationId: wiki.view
+      responses:
+        "200":
+          description: OK
+  /edit/{title}:
+    parameters:
+      - $ref: "#/components/parameters/title"
+    get:
+      summary: Edit a wiki page
+      operationId: wiki.edit
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Save a wiki page
+      operationId: wiki.save
+      responses:
+        "200":
+          description: OK
+  /static:
+    get:
+      summary: Edit a wiki page
+      operationId: static
+      responses:
+        "200":
+          description: OK
+      x-wildcard: true
+  /oas3.json:
+    get:
+      summary: Return the OAS3 model
+      operationId: oas3.json
+      responses:
+        "200":
+          description: OK
+
+components:
+  parameters:
+    title:
+      in: path
+      name: title
+      required: true
+      schema:
+        type: string
+      description: A title of a wiki page
