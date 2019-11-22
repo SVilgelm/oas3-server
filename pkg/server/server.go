@@ -140,20 +140,12 @@ func NewServer(cfg *config.Config) *Server {
 	srv.R = srv.HTTPServer.Handler.(*mux.Router)
 	srv.ops = oas3.RegisterOperations(srv.Config.Model, srv.R)
 	srv.R.Use(LogHTTP(&srv), oas3.Middleware(srv.ops))
-	err := srv.HandleFunc("oas3.json", oas3.JSON)
-	if err != nil {
-		log.Println(err)
-	}
-	err = srv.HandleFunc("oas3.console", oas3.Console)
-	if err != nil {
-		log.Println(err)
-	}
+	srv.HandleFunc("oas3.json", oas3.JSON)
+	srv.HandleFunc("oas3.yaml", oas3.YAML)
+	srv.HandleFunc("oas3.console", oas3.Console)
 	if _, err := os.Stat(cfg.Static); !os.IsNotExist(err) {
 		fileServer := http.FileServer(FileSystem{http.Dir(cfg.Static)})
-		err := srv.Handle("static", fileServer)
-		if err != nil {
-			log.Println(err)
-		}
+		srv.Handle("static", fileServer)
 	}
 
 	return &srv

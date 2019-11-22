@@ -8,24 +8,24 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/SVilgelm/oas3-server/pkg/oas3"
-	"gopkg.in/yaml.v2"
+	"github.com/ghodss/yaml"
 )
 
 // Config is a main cofing
 type Config struct {
-	OAS3    string    `yaml:"oas3,omitempty" json:"oas3,omitempty"`
-	Address string    `yaml:"address,omitempty" json:"address,omitempty"`
-	TLS     TLSConfig `yaml:"tls,omitempty" json:"tls,omitempty"`
-	Static  string    `yaml:"static,omitempty" json:"static,omitempty"`
+	OAS3    string    `json:"oas3,omitempty"`
+	Address string    `json:"address,omitempty"`
+	TLS     TLSConfig `json:"tls,omitempty"`
+	Static  string    `json:"static,omitempty"`
 
-	Model *openapi3.Swagger `yaml:"-,omitempty" json:"-,omitempty"`
+	Model *openapi3.Swagger `json:"-"`
 }
 
 // TLSConfig is used to cofigure tls settings
 type TLSConfig struct {
-	Enabled bool   `yaml:"enabled,omitempty" json:"enabled,omitempty"`
-	Cert    string `yaml:"cert,omitempty" json:"cert,omitempty"`
-	Key     string `yaml:"key,omitempty" json:"key,omitempty"`
+	Enabled bool   `json:"enabled,omitempty"`
+	Cert    string `json:"cert,omitempty"`
+	Key     string `json:"key,omitempty"`
 }
 
 func (c *Config) init() error {

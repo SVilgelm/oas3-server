@@ -54,12 +54,25 @@ paths:
       x-wildcard: true
   /oas3.json:
     get:
-      summary: Return the OAS3 model
+      summary: Return the OAS3 model in JSON format
       operationId: oas3.json
       responses:
         "200":
           description: OK
-
+  /oas3.yaml:
+    get:
+      summary: Return the OAS3 model in YAML format
+      operationId: oas3.yaml
+      responses:
+        "200":
+          description: OK
+  /console:
+    get:
+      summary: OAS3 Web UI (Develper Console)
+      operationId: oas3.console
+      responses:
+        "200":
+          description: OK
 components:
   parameters:
     title:
