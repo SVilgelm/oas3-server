@@ -1,0 +1,67 @@
+{{ define "base" }}
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+
+    <title>{{if .Title }}{{ .Title }}{{else}}Articles{{end}}</title>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+        integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+        crossorigin="anonymous"></script>
+    <style>
+        body {
+            padding-top: 65px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+        <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/">Articles</a>
+        <form id="createArticle" action="/" method="POST" class="form-inline my-2 my-lg-0 w-100">
+            <input class="form-control mr-sm-2 w-100" type="create" placeholder="Create" aria-label="Create"
+                name="title">
+        </form>
+        <button class="btn btn-outline-success my-2 my-sm-0" type="submit" form="createArticle">Create</button>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+                <div class="sidebar-sticky">
+                    <ul class="nav flex-column">
+                        {{range $name := $.Articles}}
+                        <li class="nav-item">
+                            <a class="nav-link {{if eq $name $.Title}}active{{end}}" href="/view/{{$name}}">
+                                {{$name}}
+                            </a>
+                        </li>
+                        {{end}}
+                    </ul>
+                </div>
+            </nav>
+
+            <main role="main" class="col-md-9 ml-sm-auto col-lg-10 px-4">
+                {{if .Title}}
+                <div
+                    class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">{{ .Title }}</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group mr-2">
+                            {{block "buttons" .}} {{end}}
+                        </div>
+                    </div>
+                </div>
+                {{block "content" .}} {{end}}
+                {{end}}
+            </main>
+        </div>
+    </div>
+</body>
+
+</html>
+{{ end }}

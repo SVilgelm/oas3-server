@@ -6,13 +6,17 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/mux"
+
 	"github.com/SVilgelm/oas3-server/pkg/config"
 	"github.com/SVilgelm/oas3-server/pkg/server"
 )
 
+// Page is a structure to render templates
 type Page struct {
-	Title string
-	Body  string
+	Title    string
+	Body     string
+	Articles []string
 }
 
 func (p *Page) save() error {
@@ -37,25 +41,22 @@ var fn = template.FuncMap{
 	"noescape": noescape,
 }
 
-var templates = template.Must(
-	template.New("").
-		Funcs(fn).
-		ParseFiles(
+var templates = map[string]*template.Template{
+	"edit": template.Must(
+		template.ParseFiles(
+			"templates/base.html",
 			"templates/edit.html",
-			"templates/view.html",
-			"templates/list.html",
 		),
-)
-
-func renderTemplate(w http.ResponseWriter, name string, p *Page) {
-	err := templates.ExecuteTemplate(w, name+".html", p)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
+	).Funcs(fn),
+	"view": template.Must(
+		template.ParseFiles(
+			"templates/base.html",
+			"templates/view.html",
+		),
+	).Funcs(fn),
 }
 
-func listHandler(w http.ResponseWriter, r *http.Request) {
-	var body strings.Builder
+func renderTemplate(w http.ResponseWriter, name string, p *Page) {
 	files, err := ioutil.ReadDir("data")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -64,25 +65,26 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		if file.Name() == ".keep" {
 			continue
 		}
-		if body.Len() == 0 {
-			body.WriteString("<ul>")
-		}
-		name := strings.TrimSuffix(file.Name(), ".txt")
-		body.WriteString("<li><a href=\"/view/")
-		body.WriteString(name)
-		body.WriteString("\">")
-		body.WriteString(name)
-		body.WriteString("</a></li>")
+		title := strings.TrimSuffix(file.Name(), ".txt")
+		p.Articles = append(p.Articles, title)
 	}
+
+	err = templates[name].ExecuteTemplate(w, name+".html", p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
+
+func listHandler(w http.ResponseWriter, r *http.Request) {
+	var body strings.Builder
 	if body.Len() > 0 {
 		body.WriteString("</ul>")
 	}
 
 	p := &Page{
-		Title: "Pages",
-		Body:  body.String(),
+		Title: "",
 	}
-	renderTemplate(w, "list", p)
+	renderTemplate(w, "view", p)
 }
 
 func createHandler(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +96,9 @@ func createHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func editHandler(w http.ResponseWriter, r *http.Request) {
-	title := strings.TrimPrefix(r.RequestURI, "/edit/")
+	vars := mux.Vars(r)
+	title := vars["title"]
+
 	p, err := loadPage(title)
 	if err != nil {
 		p = &Page{Title: title}
@@ -103,7 +107,8 @@ func editHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func saveHandler(w http.ResponseWriter, r *http.Request) {
-	title := strings.TrimPrefix(r.RequestURI, "/edit/")
+	vars := mux.Vars(r)
+	title := vars["title"]
 	body := r.FormValue("body")
 	p := &Page{Title: title, Body: body}
 	err := p.save()
@@ -115,7 +120,8 @@ func saveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewHandler(w http.ResponseWriter, r *http.Request) {
-	title := strings.TrimPrefix(r.RequestURI, "/view/")
+	vars := mux.Vars(r)
+	title := vars["title"]
 	p, err := loadPage(title)
 	if err != nil {
 		http.Redirect(w, r, "/edit/"+title, http.StatusFound)

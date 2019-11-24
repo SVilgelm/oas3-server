@@ -1,17 +1,10 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <meta charset="UTF-8">
-    <title>{{.Title}}</title>
-</head>
-
-<body>
-    <h1>Editing {{.Title}}</h1>
-    <form action="/edit/{{.Title}}" method="POST">
-        <div><textarea name="body" rows="20" cols="80">{{.Body}}</textarea></div>
-        <div><input type="submit" value="Save"></div>
-    </form>
-</body>
-
-</html>
+{{define "content"}}
+<form id="editArticle" action="/edit/{{.Title}}" method="POST">
+    <textarea class="form-control" name="body" rows="20">{{.Body}}</textarea>
+</form>
+{{end}}
+{{define "buttons"}}
+<button class="btn btn-outline-success my-2 my-sm-0" type="submit" form="editArticle">Save</button>
+<a type="button" class="btn btn-outline-success my-2 my-sm-0" href="/view/{{ .Title }}">Cancel</a>
+{{end}}
+{{template "base" $}}

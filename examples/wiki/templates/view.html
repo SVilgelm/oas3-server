@@ -1,17 +1,7 @@
-<!DOCTYPE html>
-<html>
-
-<head>
-    <meta charset="UTF-8">
-    <title>{{.Title}}</title>
-</head>
-
-<body>
-    <h1>{{.Title}}</h1>
-    <p>[<a href="/edit/{{.Title}}">Edit</a>]</p>
-    <div>
-        <pre>{{.Body}}</pre>
-    </div>
-</body>
-
-</html>
+{{define "content"}}
+<pre>{{.Body}}</pre>
+{{end}}
+{{define "buttons"}}
+<a type="button" class="btn btn-outline-success my-2 my-sm-0" href="/edit/{{ .Title }}">Edit</a>
+{{end}}
+{{template "base" $}}
