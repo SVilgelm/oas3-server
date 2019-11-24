@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/SVilgelm/oas3-server/pkg/oas3"
 	"github.com/gorilla/mux"
 )
 
@@ -29,7 +30,7 @@ func (w *statusWriter) Write(b []byte) (int, error) {
 }
 
 // LogHTTP is a middleware to log requests
-func LogHTTP(srv *Server) mux.MiddlewareFunc {
+func LogHTTP(mapper *oas3.Mapper) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -37,7 +38,7 @@ func LogHTTP(srv *Server) mux.MiddlewareFunc {
 			next.ServeHTTP(&sw, r)
 			duration := time.Now().Sub(start)
 			route := mux.CurrentRoute(r)
-			op := srv.ops.ByRoute(route)
+			op := mapper.ByRoute(route)
 			log.Println(
 				"Request",
 				op.ID,

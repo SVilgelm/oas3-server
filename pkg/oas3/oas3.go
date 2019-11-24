@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/SVilgelm/oas3-server/pkg/utils"
+
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/ghodss/yaml"
 )
@@ -19,32 +21,34 @@ func Load(fileName string) (*openapi3.Swagger, error) {
 	return model, nil
 }
 
-// JSON returns the OAS3 model in JSON format
-func JSON(w http.ResponseWriter, r *http.Request) {
+// Model returns the OAS3 model in JSON/YAML format
+func Model(w http.ResponseWriter, r *http.Request) {
 	item := OperationFromContext(r.Context())
+	types := utils.GetContentTypes(r)
+	var data []byte
+	var err error
+	var contentType string
+	if utils.Contains(types, "application/json") {
+		contentType = "application/json"
+		data, err = json.Marshal(item.Model)
+	} else if utils.Contains(types, "application/yaml") {
+		contentType = "application/yaml"
+		data, err = yaml.Marshal(item.Model)
+	} else {
+		http.Error(
+			w,
+			"Supported media type not found. Use 'application/json' or 'application/yaml'",
+			http.StatusUnsupportedMediaType,
+		)
+		return
+	}
 
-	data, err := json.Marshal(item.Model)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-	w.Write(data)
-}
-
-// YAML returns the OAS3 model in YAML format
-func YAML(w http.ResponseWriter, r *http.Request) {
-	item := OperationFromContext(r.Context())
-
-	data, err := yaml.Marshal(item.Model)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/yaml; charset=utf-8")
+	w.Header().Set("Content-Type", contentType+"; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 	w.Write(data)
 }

@@ -14,36 +14,51 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/HTML"
     post:
       summary: Create new wiki page
       operationId: wiki.create
+      requestBody:
+        required: true
+
       responses:
-        "200":
-          description: OK
+        "301":
+          description: "Redirect to /edit/{title}"
   /view/{title}:
     parameters:
-      - $ref: "#/components/parameters/title"
+      - $ref: "#/components/parameters/Title"
     get:
       summary: View a wiki page
       operationId: wiki.view
       responses:
         "200":
           description: OK
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/HTML"
   /edit/{title}:
     parameters:
-      - $ref: "#/components/parameters/title"
+      - $ref: "#/components/parameters/Title"
     get:
       summary: Edit a wiki page
       operationId: wiki.edit
       responses:
         "200":
           description: OK
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/HTML"
     post:
       summary: Save a wiki page
       operationId: wiki.save
       responses:
-        "200":
-          description: OK
+        "301":
+          description: "Redirect to /view/{title}"
   /static:
     get:
       summary: Edit a wiki page
@@ -52,20 +67,20 @@ paths:
         "200":
           description: OK
       x-wildcard: true
-  /oas3.json:
+  /oas3-model:
     get:
-      summary: Return the OAS3 model in JSON format
-      operationId: oas3.json
+      summary: Return the OAS3 model
+      operationId: oas3.model
       responses:
         "200":
           description: OK
-  /oas3.yaml:
-    get:
-      summary: Return the OAS3 model in YAML format
-      operationId: oas3.yaml
-      responses:
-        "200":
-          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAS3"
+            application/yaml:
+              schema:
+                $ref: "#/components/schemas/OAS3"
   /console:
     get:
       summary: OAS3 Web UI (Develper Console)
@@ -73,12 +88,39 @@ paths:
       responses:
         "200":
           description: OK
+          content:
+            text/html:
+              schema:
+                $ref: "#/components/schemas/HTML"
 components:
   parameters:
-    title:
+    Title:
       in: path
       name: title
       required: true
       schema:
-        type: string
+        $ref: "#/components/schemas/Title"
       description: A title of a wiki page
+  requestBodies:
+    Article:
+      description: Wiki Article
+      requred: true
+      content:
+        application/x-www-form-urlencoded:
+          schema:
+            $ref: "#/components/schemas/Article"
+  schemas:
+    HTML:
+      type: string
+    OAS3:
+      type: object
+    Title:
+      type: string
+      minLength: 1
+    Article:
+      type: object
+      properties:
+        title:
+          $ref: "#/components/schemas/Title"
+        body:
+          type: string

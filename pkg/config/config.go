@@ -68,6 +68,7 @@ func Load(fileName string) (*Config, error) {
 func SafeLoad(fileName string) *Config {
 	cfg, err := Load(fileName)
 	if err != nil {
+		log.Println(err)
 		cfg = &Config{}
 		cfg.init()
 	}

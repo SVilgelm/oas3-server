@@ -70,50 +70,85 @@ func getBoolExt(name string, extensions map[string]interface{}) (bool, error) {
 	return res, nil
 }
 
-func createOperation(
+func getOperationByMethod(pathItem *openapi3.PathItem, method string) *openapi3.Operation {
+	switch method {
+	case http.MethodHead:
+		return pathItem.Head
+	case http.MethodPost:
+		return pathItem.Post
+	case http.MethodPut:
+		return pathItem.Put
+	case http.MethodPatch:
+		return pathItem.Patch
+	case http.MethodDelete:
+		return pathItem.Delete
+	case http.MethodConnect:
+		return pathItem.Connect
+	case http.MethodOptions:
+		return pathItem.Options
+	case http.MethodTrace:
+		return pathItem.Trace
+	default:
+		return pathItem.Get
+	}
+}
+
+func processOperation(
+	mapper *Mapper,
 	model *openapi3.Swagger,
 	router *mux.Router,
 	path string,
-	pathMethod *openapi3.Operation,
 	httpMethod string,
-	ops *Mapper,
 ) {
-	if pathMethod != nil {
-		if pathMethod.OperationID == "" {
+	pathOperation := getOperationByMethod(model.Paths[path], httpMethod)
+	if pathOperation != nil {
+		if pathOperation.OperationID == "" {
 			log.Printf("No operationID for path '%s' and method '%s', skiped", path, httpMethod)
 			return
 		}
-		op := ops.ByID(pathMethod.OperationID)
-		if op == nil {
-			op = NewItem(pathMethod.OperationID, model)
+		item := mapper.ByID(pathOperation.OperationID)
+		if item == nil {
+			item = NewItem(pathOperation.OperationID, model)
 		}
 		var route *mux.Route
-		if v, err := getBoolExt("x-wildcard", pathMethod.Extensions); err == nil && v {
+		if v, err := getBoolExt("x-wildcard", pathOperation.Extensions); err == nil && v {
 			route = router.PathPrefix(path)
 		} else {
 			route = router.Path(path)
 		}
-		op.Routes = append(
-			op.Routes,
+		item.Routes = append(
+			item.Routes,
 			route.Methods(httpMethod).HandlerFunc(http.NotFound),
 		)
-		ops.Add(op)
+		mapper.Add(item)
 	}
 }
 
 // RegisterOperations creates all routes
 func RegisterOperations(model *openapi3.Swagger, router *mux.Router) *Mapper {
-	ops := NewMapper()
-	for path, meta := range model.Paths {
-		if meta == nil {
-			log.Printf("Wrong path '%s' definition, skiped", path)
-			continue
-		}
-		createOperation(model, router, path, meta.Get, http.MethodGet, ops)
-		createOperation(model, router, path, meta.Put, http.MethodPut, ops)
-		createOperation(model, router, path, meta.Post, http.MethodPost, ops)
-		createOperation(model, router, path, meta.Patch, http.MethodPatch, ops)
-		createOperation(model, router, path, meta.Delete, http.MethodDelete, ops)
+	allMethods := []string{
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodPatch,
+		http.MethodDelete,
+		http.MethodConnect,
+		http.MethodOptions,
+		http.MethodTrace,
 	}
-	return ops
+
+	mapper := NewMapper()
+	if model != nil {
+		for path, meta := range model.Paths {
+			if meta == nil {
+				log.Printf("Wrong path '%s' definition, skiped", path)
+				continue
+			}
+			for _, httpMethod := range allMethods {
+				processOperation(mapper, model, router, path, httpMethod)
+			}
+		}
+	}
+	return mapper
 }
