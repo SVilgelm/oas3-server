@@ -1,2 +1,5 @@
 oas3: docs/wiki.yaml
 static: static
+validate:
+  request: true
+  response: true

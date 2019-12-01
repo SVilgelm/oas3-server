@@ -9,6 +9,8 @@ servers:
 paths:
   /:
     get:
+      parameters:
+        - $ref: "#/components/parameters/SortOrder"
       summary: View a list of wiki pages
       operationId: wiki.list
       responses:
@@ -22,14 +24,14 @@ paths:
       summary: Create new wiki page
       operationId: wiki.create
       requestBody:
-        required: true
-
+        $ref: "#/components/requestBodies/Article"
       responses:
         "301":
           description: "Redirect to /edit/{title}"
   /view/{title}:
     parameters:
       - $ref: "#/components/parameters/Title"
+      - $ref: "#/components/parameters/SortOrder"
     get:
       summary: View a wiki page
       operationId: wiki.view
@@ -43,6 +45,7 @@ paths:
   /edit/{title}:
     parameters:
       - $ref: "#/components/parameters/Title"
+      - $ref: "#/components/parameters/SortOrder"
     get:
       summary: Edit a wiki page
       operationId: wiki.edit
@@ -56,6 +59,8 @@ paths:
     post:
       summary: Save a wiki page
       operationId: wiki.save
+      requestBody:
+        $ref: "#/components/requestBodies/Article"
       responses:
         "301":
           description: "Redirect to /view/{title}"
@@ -101,6 +106,13 @@ components:
       schema:
         $ref: "#/components/schemas/Title"
       description: A title of a wiki page
+    SortOrder:
+      in: cookie
+      name: sort_order
+      required: false
+      schema:
+        $ref: "#/components/schemas/SortOrder"
+      description: Sorting order 1 or -1
   requestBodies:
     Article:
       description: Wiki Article
@@ -117,6 +129,10 @@ components:
     Title:
       type: string
       minLength: 1
+    SortOrder:
+      type: integer
+      minimum: -1
+      maximum: 1
     Article:
       type: object
       properties:

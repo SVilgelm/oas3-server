@@ -26,12 +26,12 @@ type Server struct {
 
 // HandleFunc links the handler with the operation
 func (s *Server) HandleFunc(operationID string, handler http.HandlerFunc) error {
-	op := s.mapper.ByID(operationID)
-	if op == nil {
+	item := s.mapper.ByID(operationID)
+	if item == nil {
 		return fmt.Errorf("The operation '%s' not found", operationID)
 	}
 	log.Printf("Linking new handler for the operation '%s'", operationID)
-	for _, route := range op.Routes {
+	for _, route := range item.Routes {
 		route.HandlerFunc(handler)
 	}
 	return nil
@@ -39,12 +39,12 @@ func (s *Server) HandleFunc(operationID string, handler http.HandlerFunc) error 
 
 // Handle links the handler with the operation
 func (s *Server) Handle(operationID string, handler http.Handler) error {
-	op := s.mapper.ByID(operationID)
-	if op == nil {
+	item := s.mapper.ByID(operationID)
+	if item == nil {
 		return fmt.Errorf("The operation '%s' not found", operationID)
 	}
 	log.Printf("Linking new handler for the operation '%s'", operationID)
-	for _, route := range op.Routes {
+	for _, route := range item.Routes {
 		route.Handler(handler)
 	}
 	return nil
@@ -139,7 +139,11 @@ func NewServer(cfg *config.Config) *Server {
 	}
 	srv.R = srv.HTTPServer.Handler.(*mux.Router)
 	srv.mapper = oas3.RegisterOperations(srv.Config.Model, srv.R)
-	srv.R.Use(LogHTTP(srv.mapper), oas3.Middleware(srv.mapper))
+	srv.R.Use(LogHTTP(srv.mapper), oas3.Middleware(
+		srv.mapper,
+		srv.Config.Validate.Request,
+		srv.Config.Validate.Response,
+	))
 	srv.HandleFunc("oas3.model", oas3.Model)
 	srv.HandleFunc("oas3.console", oas3.Console)
 	if _, err := os.Stat(cfg.Static); !os.IsNotExist(err) {

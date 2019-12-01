@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -131,7 +132,11 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	cfg := config.SafeLoad("config.yaml")
+	cfg, err := config.Load("config.yaml")
+	if err != nil {
+		println("Config Validation Error: ", err.Error())
+		os.Exit(1)
+	}
 	srv := server.NewServer(cfg)
 	srv.HandleFunc("wiki.list", listHandler)
 	srv.HandleFunc("wiki.create", createHandler)

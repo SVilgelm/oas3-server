@@ -1,6 +1,7 @@
 package oas3
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
@@ -14,6 +15,10 @@ import (
 // Load parses the YAML/JSON-encoded file with OpenApi 3 Specification
 func Load(fileName string) (*openapi3.Swagger, error) {
 	model, err := openapi3.NewSwaggerLoader().LoadSwaggerFromFile(fileName)
+	if err != nil {
+		return nil, err
+	}
+	err = model.Validate(context.Background())
 	if err != nil {
 		return nil, err
 	}

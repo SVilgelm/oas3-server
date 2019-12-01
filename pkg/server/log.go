@@ -35,23 +35,25 @@ func LogHTTP(mapper *oas3.Mapper) mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 			sw := statusWriter{ResponseWriter: w}
+			defer func() {
+				duration := time.Now().Sub(start)
+				route := mux.CurrentRoute(r)
+				op := mapper.ByRoute(route)
+				log.Println(
+					"Request",
+					op.ID,
+					r.Host,
+					r.RemoteAddr,
+					r.Method,
+					r.RequestURI,
+					r.Proto,
+					sw.status,
+					sw.length,
+					r.Header.Get("User-Agent"),
+					duration,
+				)
+			}()
 			next.ServeHTTP(&sw, r)
-			duration := time.Now().Sub(start)
-			route := mux.CurrentRoute(r)
-			op := mapper.ByRoute(route)
-			log.Println(
-				"Request",
-				op.ID,
-				r.Host,
-				r.RemoteAddr,
-				r.Method,
-				r.RequestURI,
-				r.Proto,
-				sw.status,
-				sw.length,
-				r.Header.Get("User-Agent"),
-				duration,
-			)
 		})
 	}
 }
