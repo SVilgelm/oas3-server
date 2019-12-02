@@ -21,6 +21,8 @@ jobs:
       uses: actions/setup-go@v1
       with:
         go-version: ${{ matrix.go-version }}
+    - name: Install golint
+      run: go get -u golang.org/x/lint/golint
     - name: Checkout code
       uses: actions/checkout@v1
     - name: Run gofmt
