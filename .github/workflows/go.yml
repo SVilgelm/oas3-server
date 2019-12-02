@@ -1,5 +1,5 @@
-name: Test
-on: 
+name: Tests
+on:
   push:
     branches:
       - master
@@ -10,27 +10,51 @@ on:
       - master
       - v*
 jobs:
-  test:
+  style:
     strategy:
       matrix:
-        go-version: [1.12.x, 1.13.x]
-        platform: [ubuntu-latest, macos-latest, windows-latest]
+        go-version: [1.13.x]
+        platform: [ubuntu-latest]
     runs-on: ${{ matrix.platform }}
     steps:
-    - name: Install Go
-      uses: actions/setup-go@v1
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Install golint
-      run: go get -u golang.org/x/lint/golint
-    - name: Checkout code
-      uses: actions/checkout@v1
-    - name: Run gofmt
-      run: diff -u <(echo -n) <(gofmt -d -s .)
-    - name: Run golint
-      run: golint -set_exit_status ./...
-    - name: Run go vet
-      run: go vet ./...
-    - name: Run go test
-      run: go test -cover -race -coverprofile=coverage.txt -covermode=atomic
-      
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Run gofmt
+        run: diff -u <(echo -n) <(gofmt -d -s .)
+      - name: Run go vet
+        run: go vet ./...
+      - name: Install golint
+        run: go get -u golang.org/x/lint/golint
+      - name: Run golint
+        run: ~/go/bin/golint -set_exit_status ./...
+      - name: Install misspell
+        run: go get -u github.com/client9/misspell/cmd/misspell
+      - name: Run misspell
+        run: ~/go/bin/misspell -error $(find . -name "*.go")
+  unit-tests:
+    strategy:
+      matrix:
+        go-version: [1.13.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Run
+        run: go test -cover -race -coverprofile=coverage.txt -covermode=atomic ./...
+      - name: Upload coverage
+        uses: codecov/codecov-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: ./coverage.txt
+          flags: unittests
+          name: codecov-umbrella
+          yml: ./codecov.yml

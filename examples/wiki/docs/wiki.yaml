@@ -1,4 +1,4 @@
-openapi: 3.0.0
+openapi: 3.0.2
 info:
   version: "1.0.0"
   title: "Wiki"
@@ -15,11 +15,7 @@ paths:
       operationId: wiki.list
       responses:
         "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                $ref: "#/components/schemas/HTML"
+          $ref: "#/components/responses/HTML200"
     post:
       summary: Create new wiki page
       operationId: wiki.create
@@ -37,11 +33,7 @@ paths:
       operationId: wiki.view
       responses:
         "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                $ref: "#/components/schemas/HTML"
+          $ref: "#/components/responses/HTML200"
   /edit/{title}:
     parameters:
       - $ref: "#/components/parameters/Title"
@@ -51,11 +43,7 @@ paths:
       operationId: wiki.edit
       responses:
         "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                $ref: "#/components/schemas/HTML"
+          $ref: "#/components/responses/HTML200"
     post:
       summary: Save a wiki page
       operationId: wiki.save
@@ -70,7 +58,7 @@ paths:
       operationId: static
       responses:
         "200":
-          description: OK
+          $ref: "#/components/responses/HTML200"
       x-wildcard: true
   /oas3-model:
     get:
@@ -92,11 +80,7 @@ paths:
       operationId: oas3.console
       responses:
         "200":
-          description: OK
-          content:
-            text/html:
-              schema:
-                $ref: "#/components/schemas/HTML"
+          $ref: "#/components/responses/HTML200"
 components:
   parameters:
     Title:
@@ -113,6 +97,13 @@ components:
       schema:
         $ref: "#/components/schemas/SortOrder"
       description: Sorting order 1 or -1
+  responses:
+    HTML200:
+      description: OK
+      content:
+        text/html:
+          schema:
+            $ref: "#/components/schemas/HTML"
   requestBodies:
     Article:
       description: Wiki Article
@@ -140,3 +131,4 @@ components:
           $ref: "#/components/schemas/Title"
         body:
           type: string
+          minLength: 1
