@@ -56,7 +56,7 @@ func (i *Item) FindParam(route *mux.Route, in, name string) *openapi3.Parameter 
 func getSchemaBuilder(params map[string]map[string]string, required map[string][]string) *strings.Builder {
 	size := 32 + len(params) // `{"type":"object","properties":{}}`(33) + commas: len(params) - 1
 	for in, pr := range params {
-		size += len(in) + 35 + len(pr) // `"` + len(in) + `":{"type":"object","properties":{}}`(35) + commans: len(pr) - 1
+		size += len(in) + 35 + len(pr) // `"` + len(in) + `":{"type":"object","properties":{}}`(35) + commas: len(pr) - 1
 		for name, schema := range pr {
 			size += 3 + len(name) + len(schema) // `"` + len(name) + `":` + len(schema)
 		}
