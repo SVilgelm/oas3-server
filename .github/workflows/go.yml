@@ -53,4 +53,7 @@ jobs:
       - name: Install Sonar Scanner Client
         run: curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.2.0.1873-linux.zip -o sonar.zip && unzip sonar.zip && mv sonar-scanner* sonar && rm sonar.zip
       - name: Run sonarqube
-        run: sonar/bin/sonar-scanner -Dsonar.login=${{ secrets.SONAR_LOGIN }} -X
+        run: sonar/bin/sonar-scanner -X
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_LOGIN }}
