@@ -3,34 +3,34 @@ package main
 import (
 	"net/http"
 	"os"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	baseURL     string
-	baseURLLock sync.Mutex
+	baseURL string
 )
 
 func TestMain(m *testing.M) {
 	srv := initServer()
 	srv.Config.Address = "127.0.0.1:0"
-	srv.Start()
-	baseURLLock.Lock()
+	err := srv.Start()
+	if err != nil {
+		panic(err)
+	}
 	baseURL = "http://" + srv.Config.Address + "/"
-	baseURLLock.Unlock()
 	exitCode := m.Run()
-	srv.Shutdown()
+	err = srv.Shutdown()
+	if err != nil {
+		panic(err)
+	}
 	os.Exit(exitCode)
 }
 
 func TestModel(t *testing.T) {
 	t.Parallel()
-	baseURLLock.Lock()
 	url := baseURL + "oas3-model"
-	baseURLLock.Unlock()
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	req.Header.Set("content-type", "application/json")
 	assert.NoError(t, err)
@@ -57,9 +57,7 @@ func TestModel(t *testing.T) {
 
 func TestList(t *testing.T) {
 	t.Parallel()
-	baseURLLock.Lock()
 	resp, err := http.Get(baseURL)
-	baseURLLock.Unlock()
 	t.Log(resp)
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)

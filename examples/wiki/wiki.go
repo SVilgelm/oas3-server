@@ -3,6 +3,7 @@ package main
 import (
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -147,5 +148,8 @@ func initServer() *server.Server {
 }
 
 func main() {
-	initServer().Serve()
+	err := initServer().Serve()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
