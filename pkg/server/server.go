@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -59,38 +58,6 @@ func (s *Server) Shutdown() {
 
 // Start runs the server
 func (s *Server) Start() {
-	s.R.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		msg := "Route"
-		op := s.mapper.ByRoute(route)
-		if op != nil {
-			msg += " '" + op.ID + "'"
-		}
-		msg += ": "
-		methods, err := route.GetMethods()
-		if err == nil {
-			msg += "[" + strings.Join(methods, "|") + "] "
-		}
-		pathTemplate, err := route.GetPathTemplate()
-		if err == nil {
-			msg += pathTemplate + " "
-			pathRegexp, err := route.GetPathRegexp()
-			if err == nil {
-				msg += "(" + pathRegexp + ") "
-			}
-
-		}
-		queriesTemplates, err := route.GetQueriesTemplates()
-		if err == nil && len(queriesTemplates) > 0 {
-			msg += "? " + strings.Join(queriesTemplates, ",") + " "
-			queriesRegexps, err := route.GetQueriesRegexp()
-			if err == nil && len(queriesRegexps) > 0 {
-				msg += "(" + strings.Join(queriesRegexps, ",") + ") "
-			}
-		}
-		log.Println(msg)
-		return nil
-	})
-
 	go func() {
 		var err error
 		if s.Config.TLS.Enabled {

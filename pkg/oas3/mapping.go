@@ -78,18 +78,13 @@ func prepareSchema(params map[string]map[string]string, required map[string][]st
 	}
 	schemaData := getSchemaBuilder(params, required)
 	schemaData.WriteString(`{"type":"object","properties":{`)
-	firstIn := true
+	quoteIn := `"`
 	for in, pr := range params {
-		if firstIn {
-			schemaData.WriteString(`"`)
-			firstIn = false
-		} else {
-			schemaData.WriteString(`,"`)
-		}
+		schemaData.WriteString(quoteIn)
+		quoteIn = `,"`
 		schemaData.WriteString(in)
 		schemaData.WriteString(`":{"type":"object",`)
-		req, ok := required[in]
-		if ok && len(req) > 0 {
+		if req := required[in]; len(req) > 0 {
 			schemaData.WriteString(`"required":["`)
 			schemaData.WriteString(req[0])
 			schemaData.WriteString(`"`)
@@ -101,14 +96,10 @@ func prepareSchema(params map[string]map[string]string, required map[string][]st
 			schemaData.WriteString(`],`)
 		}
 		schemaData.WriteString(`"properties":{`)
-		firstPr := true
+		quotePr := `"`
 		for name, schema := range pr {
-			if firstPr {
-				schemaData.WriteString(`"`)
-				firstPr = false
-			} else {
-				schemaData.WriteString(`,"`)
-			}
+			schemaData.WriteString(quotePr)
+			quotePr = `,"`
 			schemaData.WriteString(name)
 			schemaData.WriteString(`":`)
 			schemaData.WriteString(schema)
@@ -133,35 +124,31 @@ func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, op
 	routeMeta.requestParamsNotString = make(map[string]map[string]bool)
 
 	for _, parameters := range []openapi3.Parameters{pathParameters, operation.Parameters} {
-		if len(parameters) > 0 {
-			for _, pr := range parameters {
-				if pr.Value == nil {
-					log.Println("There is invalide parameter. Skipping")
-					continue
-				}
-				if pr.Value.Schema.Value == nil {
-					log.Printf("Schema of a parameter '%s/%s' is null. Skipping", pr.Value.In, pr.Value.Name)
-					continue
-				}
-				schema, err := json.Marshal(pr.Value.Schema.Value)
-				if err != nil {
-					log.Printf("Schema of a parameter '%s/%s' is invalid: %v. Skipping", pr.Value.In, pr.Value.Name, err)
-					continue
-				}
-				in, ok := params[pr.Value.In]
-				if !ok {
-					in = make(map[string]string)
-					params[pr.Value.In] = in
-				}
-				in[pr.Value.Name] = string(schema)
-				if pr.Value.Required {
-					required[pr.Value.In] = append(required[pr.Value.In], pr.Value.Name)
-				}
-				if _, ok := routeMeta.requestParamsNotString[pr.Value.In]; !ok {
-					routeMeta.requestParamsNotString[pr.Value.In] = make(map[string]bool)
-				}
-				routeMeta.requestParamsNotString[pr.Value.In][pr.Value.Name] = pr.Value.Schema.Value.Type != "string"
+		for _, pr := range parameters {
+			if pr.Value == nil {
+				log.Println("There is invalid parameter. Skipping")
+				continue
 			}
+			if pr.Value.Schema.Value == nil {
+				log.Printf("Schema of a parameter '%s/%s' is null. Skipping", pr.Value.In, pr.Value.Name)
+				continue
+			}
+			schema, err := json.Marshal(pr.Value.Schema.Value)
+			if err != nil {
+				log.Printf("Schema of a parameter '%s/%s' is invalid: %v. Skipping", pr.Value.In, pr.Value.Name, err)
+				continue
+			}
+			if _, ok := params[pr.Value.In]; !ok {
+				params[pr.Value.In] = make(map[string]string)
+			}
+			params[pr.Value.In][pr.Value.Name] = string(schema)
+			if pr.Value.Required {
+				required[pr.Value.In] = append(required[pr.Value.In], pr.Value.Name)
+			}
+			if _, ok := routeMeta.requestParamsNotString[pr.Value.In]; !ok {
+				routeMeta.requestParamsNotString[pr.Value.In] = make(map[string]bool)
+			}
+			routeMeta.requestParamsNotString[pr.Value.In][pr.Value.Name] = pr.Value.Schema.Value.Type != "string"
 		}
 	}
 	routeMeta.requestSchema = prepareSchema(params, required)
