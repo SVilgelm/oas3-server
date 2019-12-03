@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -158,23 +157,30 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "view", p)
 }
 
-func initServer() *server.Server {
+func initServer() (*server.Server, error) {
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
-		println("Config Validation Error: ", err.Error())
-		os.Exit(1)
+		log.Println("Config Validation Error: ", err.Error())
+		return nil, err
 	}
-	srv := server.NewServer(cfg)
+	srv, err := server.NewServer(cfg)
+	if err != nil {
+		return nil, err
+	}
 	srv.HandleFunc("wiki.list", listHandler)
 	srv.HandleFunc("wiki.create", createHandler)
 	srv.HandleFunc("wiki.edit", editHandler)
 	srv.HandleFunc("wiki.save", saveHandler)
 	srv.HandleFunc("wiki.view", viewHandler)
-	return srv
+	return srv, nil
 }
 
 func main() {
-	err := initServer().Serve()
+	srv, err := initServer()
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = srv.Serve()
 	if err != nil {
 		log.Fatal(err)
 	}

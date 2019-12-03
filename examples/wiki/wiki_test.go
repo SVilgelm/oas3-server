@@ -41,7 +41,10 @@ func setupTests() (func(), error) {
 		return tearDown, err
 	}
 
-	srv := initServer()
+	srv, err := initServer()
+	if err != nil {
+		return tearDown, err
+	}
 	srv.Config.Address = "127.0.0.1:0"
 	err = srv.Start()
 	if err != nil {

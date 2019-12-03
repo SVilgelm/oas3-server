@@ -116,7 +116,7 @@ func (s *Server) Serve() error {
 }
 
 // NewServer creates new server
-func NewServer(cfg *config.Config) *Server {
+func NewServer(cfg *config.Config) (*Server, error) {
 	srv := Server{
 		HTTPServer: &http.Server{
 			ReadTimeout:  10 * time.Second,
@@ -126,7 +126,11 @@ func NewServer(cfg *config.Config) *Server {
 		Config: cfg,
 	}
 	srv.R = srv.HTTPServer.Handler.(*mux.Router)
-	srv.mapper = oas3.RegisterOperations(srv.Config.Model, srv.R)
+	mapper, err := oas3.RegisterOperations(srv.Config.Model, srv.R)
+	if err != nil {
+		return nil, err
+	}
+	srv.mapper = mapper
 	srv.R.Use(LogHTTP(srv.mapper), oas3.Middleware(
 		srv.mapper,
 		srv.Config.Validate.Request,
@@ -139,5 +143,5 @@ func NewServer(cfg *config.Config) *Server {
 		srv.Handle("static", fileServer)
 	}
 
-	return &srv
+	return &srv, nil
 }

@@ -2,6 +2,8 @@ package oas3
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
@@ -26,7 +28,7 @@ type Item struct {
 }
 
 // FindParam returns a parameter from model for given in and name
-func (i *Item) FindParam(route *mux.Route, in, name string) *openapi3.Parameter {
+func (i *Item) FindParam(in, name string, route *mux.Route) *openapi3.Parameter {
 	path, err := route.GetPathTemplate()
 	if err != nil {
 		log.Println("Cannot get a path template:", err.Error())
@@ -72,9 +74,9 @@ func getSchemaBuilder(params map[string]map[string]string, required map[string][
 	return &builder
 }
 
-func prepareSchema(params map[string]map[string]string, required map[string][]string) *jsonschema.RootSchema {
+func prepareSchema(params map[string]map[string]string, required map[string][]string) (*jsonschema.RootSchema, error) {
 	if len(params) == 0 {
-		return nil
+		return nil, nil
 	}
 	schemaData := getSchemaBuilder(params, required)
 	schemaData.WriteString(`{"type":"object","properties":{`)
@@ -109,14 +111,27 @@ func prepareSchema(params map[string]map[string]string, required map[string][]st
 	schemaData.WriteString(`}}`)
 	rs := &jsonschema.RootSchema{}
 	if err := json.Unmarshal([]byte(schemaData.String()), rs); err != nil {
-		log.Printf("Unable to prepare a valid schema: %s", err)
-		return nil
+		return nil, err
 	}
-	return rs
+	return rs, nil
+}
+
+func getSchema(pr *openapi3.ParameterRef) (string, error) {
+	if pr.Value == nil {
+		return "", errors.New("invalid parameter")
+	}
+	if pr.Value.Schema.Value == nil {
+		return "", fmt.Errorf("null schema of a parameter '%s/%s'", pr.Value.In, pr.Value.Name)
+	}
+	schema, err := json.Marshal(pr.Value.Schema.Value)
+	if err != nil {
+		return "", fmt.Errorf("invalid schema of a parameter '%s/%s': %v", pr.Value.In, pr.Value.Name, err)
+	}
+	return string(schema), nil
 }
 
 // AddRoute add routes and initializes the Schemas for the operation
-func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, operation *openapi3.Operation) {
+func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, operation *openapi3.Operation) error {
 	i.Routes = append(i.Routes, route)
 	params := make(map[string]map[string]string)
 	required := make(map[string][]string)
@@ -125,18 +140,9 @@ func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, op
 
 	for _, parameters := range []openapi3.Parameters{pathParameters, operation.Parameters} {
 		for _, pr := range parameters {
-			if pr.Value == nil {
-				log.Println("There is invalid parameter. Skipping")
-				continue
-			}
-			if pr.Value.Schema.Value == nil {
-				log.Printf("Schema of a parameter '%s/%s' is null. Skipping", pr.Value.In, pr.Value.Name)
-				continue
-			}
-			schema, err := json.Marshal(pr.Value.Schema.Value)
+			schema, err := getSchema(pr)
 			if err != nil {
-				log.Printf("Schema of a parameter '%s/%s' is invalid: %v. Skipping", pr.Value.In, pr.Value.Name, err)
-				continue
+				return err
 			}
 			if _, ok := params[pr.Value.In]; !ok {
 				params[pr.Value.In] = make(map[string]string)
@@ -151,8 +157,13 @@ func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, op
 			routeMeta.requestParamsNotString[pr.Value.In][pr.Value.Name] = pr.Value.Schema.Value.Type != "string"
 		}
 	}
-	routeMeta.requestSchema = prepareSchema(params, required)
+	rs, err := prepareSchema(params, required)
+	if err != nil {
+		return err
+	}
+	routeMeta.requestSchema = rs
 	i.meta[route] = routeMeta
+	return nil
 }
 
 // NewItem creates new Item with a new Route
@@ -238,31 +249,42 @@ func processOperation(
 	router *mux.Router,
 	path string,
 	httpMethod string,
-) {
+) error {
 	pathOperation := getOperationByMethod(model.Paths[path], httpMethod)
-	if pathOperation != nil {
-		if pathOperation.OperationID == "" {
-			log.Printf("No operationID for path '%s' and method '%s', skiped", path, httpMethod)
-			return
-		}
-		item := mapper.ByID(pathOperation.OperationID)
-		if item == nil {
-			item = NewItem(pathOperation.OperationID, model)
-		}
-		var route *mux.Route
-		if v, err := getBoolExt("x-wildcard", pathOperation.Extensions); err == nil && v {
-			route = router.PathPrefix(path)
-		} else {
-			route = router.Path(path)
-		}
-		route.Methods(httpMethod).HandlerFunc(http.NotFound)
-		item.AddRoute(route, model.Paths[path].Parameters, pathOperation)
-		mapper.Add(item)
+	if pathOperation == nil {
+		return nil
 	}
+	if pathOperation.OperationID == "" {
+		log.Printf("No operationID for path '%s' and method '%s', skiped", path, httpMethod)
+		return nil
+	}
+	item := mapper.ByID(pathOperation.OperationID)
+	if item == nil {
+		item = NewItem(pathOperation.OperationID, model)
+	}
+	wildcard, err := getBoolExt("x-wildcard", pathOperation.Extensions)
+	if err != nil {
+		return err
+	}
+	var route *mux.Route
+	switch wildcard {
+	case true:
+		route = router.PathPrefix(path)
+	case false:
+		route = router.Path(path)
+	}
+	route.Methods(httpMethod).HandlerFunc(http.NotFound)
+	err = item.AddRoute(route, model.Paths[path].Parameters, pathOperation)
+	if err != nil {
+		return err
+	}
+	mapper.Add(item)
+
+	return nil
 }
 
 // RegisterOperations creates all routes
-func RegisterOperations(model *openapi3.Swagger, router *mux.Router) *Mapper {
+func RegisterOperations(model *openapi3.Swagger, router *mux.Router) (*Mapper, error) {
 	allMethods := []string{
 		http.MethodGet,
 		http.MethodHead,
@@ -276,16 +298,20 @@ func RegisterOperations(model *openapi3.Swagger, router *mux.Router) *Mapper {
 	}
 
 	mapper := NewMapper()
-	if model != nil {
-		for path, meta := range model.Paths {
-			if meta == nil {
-				log.Printf("Wrong path '%s' definition, skiped", path)
-				continue
-			}
-			for _, httpMethod := range allMethods {
-				processOperation(mapper, model, router, path, httpMethod)
+	if model == nil {
+		return mapper, nil
+	}
+	for path, meta := range model.Paths {
+		if meta == nil {
+			log.Printf("Wrong path '%s' definition, skiped", path)
+			continue
+		}
+		for _, httpMethod := range allMethods {
+			err := processOperation(mapper, model, router, path, httpMethod)
+			if err != nil {
+				return nil, err
 			}
 		}
 	}
-	return mapper
+	return mapper, nil
 }
