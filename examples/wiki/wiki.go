@@ -131,7 +131,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "view", p)
 }
 
-func main() {
+func initServer() *server.Server {
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		println("Config Validation Error: ", err.Error())
@@ -143,5 +143,9 @@ func main() {
 	srv.HandleFunc("wiki.edit", editHandler)
 	srv.HandleFunc("wiki.save", saveHandler)
 	srv.HandleFunc("wiki.view", viewHandler)
-	srv.Serve()
+	return srv
+}
+
+func main() {
+	initServer().Serve()
 }

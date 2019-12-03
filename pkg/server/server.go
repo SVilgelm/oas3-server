@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -58,17 +59,31 @@ func (s *Server) Shutdown() {
 
 // Start runs the server
 func (s *Server) Start() {
-	go func() {
-		var err error
+	addr := s.Config.Address
+	if addr == "" {
 		if s.Config.TLS.Enabled {
-			err = s.HTTPServer.ListenAndServeTLS(s.Config.TLS.Cert, s.Config.TLS.Key)
+			addr = ":https"
 		} else {
-			err = s.HTTPServer.ListenAndServe()
+			addr = ":http"
+		}
+	}
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		log.Fatalf("Failed to create  TCP listener: %+v", err)
+	}
+	s.Config.Address = ln.Addr().(*net.TCPAddr).String()
+
+	go func(listener net.Listener) {
+		if s.Config.TLS.Enabled {
+			err = s.HTTPServer.ServeTLS(listener, s.Config.TLS.Cert, s.Config.TLS.Key)
+		} else {
+			err = s.HTTPServer.Serve(listener)
 		}
 		if err != nil {
 			log.Fatalf("Failed to serve: %+v", err)
 		}
-	}()
+	}(ln)
+
 	var u string
 	if s.Config.TLS.Enabled {
 		u = "https://"
@@ -97,7 +112,6 @@ func (s *Server) Serve() {
 func NewServer(cfg *config.Config) *Server {
 	srv := Server{
 		HTTPServer: &http.Server{
-			Addr:         cfg.Address,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
 			Handler:      mux.NewRouter(),
