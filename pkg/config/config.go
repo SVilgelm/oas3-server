@@ -13,24 +13,24 @@ import (
 
 // Config is a main cofing
 type Config struct {
-	OAS3     string         `json:"oas3,omitempty"`
-	Address  string         `json:"address,omitempty"`
-	TLS      TLSConfig      `json:"tls,omitempty"`
-	Static   string         `json:"static,omitempty"`
-	Validate ValidateConfig `json:"validate,omitempty"`
+	OAS3     string     `json:"oas3,omitempty"`
+	Address  string     `json:"address,omitempty"`
+	TLS      TLS        `json:"tls,omitempty"`
+	Static   string     `json:"static,omitempty"`
+	Validate Validation `json:"validate,omitempty"`
 
 	Model *openapi3.Swagger `json:"-,omitempty"`
 }
 
-// TLSConfig is used for tls settings
-type TLSConfig struct {
+// TLS is used for tls settings
+type TLS struct {
 	Enabled bool   `json:"enabled,omitempty"`
 	Cert    string `json:"cert,omitempty"`
 	Key     string `json:"key,omitempty"`
 }
 
-// ValidateConfig is used for Validation settings
-type ValidateConfig struct {
+// Validation is used for Validation settings
+type Validation struct {
 	Request  bool `json:"request,omitempty"`
 	Response bool `json:"response,omitempty"`
 }
@@ -54,14 +54,14 @@ func (c *Config) init() error {
 
 // Load loads a config file
 func Load(fileName string) (*Config, error) {
-	var cfg Config
 	data, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return nil, err
 	}
+	var cfg Config
 	err = yaml.Unmarshal(data, &cfg)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to unmarshal the file '%s'. %s", fileName, err)
+		return nil, fmt.Errorf("unable to unmarshal the file '%s'. %s", fileName, err)
 	}
 	log.Println("Loaded config file:", fileName)
 	err = cfg.init()
@@ -69,15 +69,4 @@ func Load(fileName string) (*Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
-}
-
-// SafeLoad loads a config file and omit any errors by setting the default values
-func SafeLoad(fileName string) *Config {
-	cfg, err := Load(fileName)
-	if err != nil {
-		log.Println(err)
-		cfg = &Config{}
-		cfg.init()
-	}
-	return cfg
 }
