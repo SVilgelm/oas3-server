@@ -50,17 +50,7 @@ jobs:
         uses: actions/checkout@v1
       - name: Run
         run: go test -cover -race -coverprofile=coverage.out -covermode=atomic -json > test-report.out ./...
-      - name: Upload coverage
-        uses: codecov/codecov-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage.out
-          flags: unittests
-          name: codecov-umbrella
-          yml: ./codecov.yml
-      - name: Download Sonar Scanner Client
-        run: curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.2.0.1873-linux.zip -o sonar.zip
-      - name: Unzip Sonar Client
-        run: unzip sonar.zip && mv sonar-scanner* sonar && rm sonar.zip
+      - name: Install Sonar Scanner Client
+        run: curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.2.0.1873-linux.zip -o sonar.zip && unzip sonar.zip && mv sonar-scanner* sonar && rm sonar.zip
       - name: Run
-        run: sonar/bin/sonar-scanner -Dsonar.pullrequest.key=$(echo ${GITHUB_REF} | awk '{split($0,a,"/"); print a[3]}') -Dsonar.login=${{ secrets.SONAR_LOGIN }}
+        run: sonar/bin/sonar-scanner -Dsonar.pullrequest.key=$(echo ${GITHUB_REF} | awk '{split($0,a,"/"); print a[3]}') -Dsonar.login=${{ secrets.SONAR_LOGIN }} -X
