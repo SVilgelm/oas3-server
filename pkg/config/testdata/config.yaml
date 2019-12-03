@@ -1,0 +1,5 @@
+oas3: testdata/model.yaml
+static: fake/static/folder
+validate:
+  request: true
+  response: true
