@@ -21,7 +21,7 @@
 </head>
 
 <body>
-    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow">
+    <nav class="navbar navbar-dark fixed-top bg-dark flex-md-nowrap p-0 shadow" aria-labe="Site Header">
         <a class="navbar-brand col-sm-3 col-md-2 mr-0" href="/">Articles</a>
         <form id="createArticle" action="/" method="POST" class="form-inline my-2 my-lg-0 w-100">
             <input class="form-control mr-sm-2 w-100" type="create" placeholder="Create" aria-label="Create"
@@ -32,7 +32,7 @@
 
     <div class="container-fluid">
         <div class="row">
-            <nav class="col-md-2 d-none d-md-block bg-light sidebar">
+            <nav class="col-md-2 d-none d-md-block bg-light sidebar" aria-label="Articles">
                 <div class="sidebar-sticky">
                     <ul class="nav flex-column">
                         {{range $name := $.Articles}}
