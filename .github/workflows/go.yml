@@ -58,3 +58,22 @@ jobs:
           flags: unittests
           name: codecov-umbrella
           yml: ./codecov.yml
+  sonarqube:
+    strategy:
+      matrix:
+        go-version: [1.13.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v1
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: Checkout code
+        uses: actions/checkout@v1
+      - name: Download Sonar Scanner Client
+        run: curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.2.0.1873-linux.zip -o sonar.zip
+      - name: Unzip
+        run: unzip sonar.zip && mv sonar-scanner* sonar && rm sonar.zip
+      - name: Run
+        run: sonar/bin/sonar-scanner -Dsonar.pullrequest.key=$(echo ${GITHUB_REF} | awk '{split($0,a,"/"); print a[3]}') -Dsonar.projectKey=SVilgelm_oas3-server -Dsonar.organization=svilgelm -Dsonar.sources=. -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=${{ secrets.SONAR_LOGIN }}
