@@ -1,17 +1,24 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
+
+	"github.com/SVilgelm/oas3-server/pkg/utils"
 
 	"github.com/gorilla/mux"
 
 	"github.com/SVilgelm/oas3-server/pkg/config"
 	"github.com/SVilgelm/oas3-server/pkg/server"
 )
+
+var dataFolder string = "data"
 
 // Page is a structure to render templates
 type Page struct {
@@ -21,12 +28,12 @@ type Page struct {
 }
 
 func (p *Page) save() error {
-	filename := "data/" + p.Title + ".txt"
+	filename := filepath.Join(dataFolder, p.Title+".txt")
 	return ioutil.WriteFile(filename, []byte(p.Body), 0600)
 }
 
 func loadPage(title string) (*Page, error) {
-	filename := "data/" + title + ".txt"
+	filename := filepath.Join(dataFolder, title+".txt")
 	body, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
@@ -77,9 +84,29 @@ func renderTemplate(w http.ResponseWriter, name string, p *Page) {
 }
 
 func listHandler(w http.ResponseWriter, r *http.Request) {
-	var body strings.Builder
-	if body.Len() > 0 {
-		body.WriteString("</ul>")
+	if utils.Contains(utils.GetContentTypes(r), "application/json") {
+		var res []string
+		files, err := ioutil.ReadDir(dataFolder)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		for _, file := range files {
+			if file.Name() == ".keep" {
+				continue
+			}
+			title := strings.TrimSuffix(file.Name(), ".txt")
+			res = append(res, title)
+		}
+		data, err := json.Marshal(res)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Header().Set("content-type", "application/json; charset=utf-8")
+		w.Write(data)
+		return
 	}
 
 	p := &Page{
@@ -131,7 +158,7 @@ func viewHandler(w http.ResponseWriter, r *http.Request) {
 	renderTemplate(w, "view", p)
 }
 
-func main() {
+func initServer() *server.Server {
 	cfg, err := config.Load("config.yaml")
 	if err != nil {
 		println("Config Validation Error: ", err.Error())
@@ -143,5 +170,12 @@ func main() {
 	srv.HandleFunc("wiki.edit", editHandler)
 	srv.HandleFunc("wiki.save", saveHandler)
 	srv.HandleFunc("wiki.view", viewHandler)
-	srv.Serve()
+	return srv
+}
+
+func main() {
+	err := initServer().Serve()
+	if err != nil {
+		log.Fatal(err)
+	}
 }
