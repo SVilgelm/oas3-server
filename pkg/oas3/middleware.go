@@ -63,48 +63,51 @@ func processValues(param *openapi3.Parameter, values []string) string {
 	return "[" + strings.Join(values, ",") + "]"
 }
 
+func getRealValue(in, name string, r *http.Request, item *Item, route *mux.Route) (string, bool) {
+	switch in {
+	case openapi3.ParameterInCookie:
+		cookie, err := r.Cookie(name)
+		if err != nil {
+			return "", false
+		}
+		return cookie.Value, true
+	case openapi3.ParameterInQuery:
+		values := r.URL.Query()[name]
+		if len(values) == 0 {
+			return "", false
+		}
+		param := item.FindParam(in, name, route)
+		if param == nil {
+			return "", false
+		}
+		return processValues(param, values), true
+	case openapi3.ParameterInHeader:
+		values := r.Header[textproto.CanonicalMIMEHeaderKey(name)]
+		if len(values) == 0 {
+			return "", false
+		}
+		param := item.FindParam(in, name, route)
+		if param == nil {
+			return "", false
+		}
+		return processValues(param, values), true
+	case openapi3.ParameterInPath:
+		vars := mux.Vars(r)
+		pathValue, ok := vars[name]
+		if !ok {
+			return "", false
+		}
+		return pathValue, true
+	}
+	return "", false
+}
+
 func getRealParameters(r *http.Request, item *Item, route *mux.Route) map[string]map[string]*string {
 	valuesCache := make(map[string]map[string]*string)
 	for in, pr := range item.meta[route].requestParamsNotString {
 		for name := range pr {
-			var value string
-			switch in {
-			case openapi3.ParameterInCookie:
-				cookie, err := r.Cookie(name)
-				if err != nil {
-					continue
-				}
-				value = cookie.Value
-			case openapi3.ParameterInQuery:
-				values := r.URL.Query()[name]
-				if len(values) == 0 {
-					continue
-				}
-				param := item.FindParam(route, in, name)
-				if param == nil {
-					log.Printf("Cannot find a parameter /%s/%s", in, name)
-					continue
-				}
-				value = processValues(param, values)
-			case openapi3.ParameterInHeader:
-				values := r.Header[textproto.CanonicalMIMEHeaderKey(name)]
-				if len(values) == 0 {
-					continue
-				}
-				param := item.FindParam(route, in, name)
-				if param == nil {
-					log.Printf("Cannot find a parameter /%s/%s", in, name)
-					continue
-				}
-				value = processValues(param, values)
-			case openapi3.ParameterInPath:
-				vars := mux.Vars(r)
-				pathValue, ok := vars[name]
-				if !ok {
-					continue
-				}
-				value = pathValue
-			default:
+			value, ok := getRealValue(in, name, r, item, route)
+			if !ok {
 				continue
 			}
 			if _, ok := valuesCache[in]; !ok {
