@@ -51,7 +51,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v1
       - name: Run unittests
-        run: go test -cover -race -coverprofile=coverage.out -covermode=atomic -json > test-report.out ./...
+        run: |
+          set -o pipefail
+          go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... | tee test-report.out
       - name: Cache Sonar Scanner Client
         id: cache-sonar
         uses: actions/cache@v1
@@ -60,7 +62,11 @@ jobs:
           key: ${{ runner.os }}-sonar-${SONAR_VERSION}
       - name: Install Sonar Scanner Client
         if: steps.cache-sonar.outputs.cache-hit != 'true'
-        run: curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_VERSION}-linux.zip -o sonar.zip && unzip sonar.zip && mv sonar-scanner* sonar && rm sonar.zip
+        run: |
+          curl -L https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${SONAR_VERSION}-linux.zip -o sonar.zip
+          unzip sonar.zip
+          mv sonar-scanner* sonar
+          rm sonar.zip
       - name: Run sonarqube
         run: sonar/bin/sonar-scanner -X
         env:
