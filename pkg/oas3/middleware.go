@@ -76,8 +76,8 @@ func getRealParameters(r *http.Request, item *Item, route *mux.Route) map[string
 				}
 				value = cookie.Value
 			case openapi3.ParameterInQuery:
-				values, ok := r.URL.Query()[name]
-				if !ok || len(values) == 0 {
+				values := r.URL.Query()[name]
+				if len(values) == 0 {
 					continue
 				}
 				param := item.FindParam(route, in, name)
@@ -87,8 +87,8 @@ func getRealParameters(r *http.Request, item *Item, route *mux.Route) map[string
 				}
 				value = processValues(param, values)
 			case openapi3.ParameterInHeader:
-				values, ok := r.Header[textproto.CanonicalMIMEHeaderKey(name)]
-				if !ok || len(values) == 0 {
+				values := r.Header[textproto.CanonicalMIMEHeaderKey(name)]
+				if len(values) == 0 {
 					continue
 				}
 				param := item.FindParam(route, in, name)
