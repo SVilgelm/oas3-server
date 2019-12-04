@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/SVilgelm/oas3-server/pkg/utils"
+
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/qri-io/jsonschema"
 
@@ -16,7 +18,7 @@ import (
 
 type meta struct {
 	requestSchema          *jsonschema.RootSchema
-	requestParamsNotString map[string]map[string]bool
+	requestParamsNotString utils.DoubleMapBool
 }
 
 // Item represents a connection between Route and OperationID
@@ -55,9 +57,9 @@ func (i *Item) FindParam(in, name string, route *mux.Route) *openapi3.Parameter 
 	return param
 }
 
-func getSchemaBuilder(params map[string]map[string]string, required map[string][]string) *strings.Builder {
-	size := 32 + len(params) // `{"type":"object","properties":{}}`(33) + commas: len(params) - 1
-	for in, pr := range params {
+func getSchemaBuilder(params *utils.DoubleMapString, required map[string][]string) *strings.Builder {
+	size := 32 + len(*params) // `{"type":"object","properties":{}}`(33) + commas: len(params) - 1
+	for in, pr := range *params {
 		size += len(in) + 35 + len(pr) // `"` + len(in) + `":{"type":"object","properties":{}}`(35) + commas: len(pr) - 1
 		for name, schema := range pr {
 			size += 3 + len(name) + len(schema) // `"` + len(name) + `":` + len(schema)
@@ -74,14 +76,14 @@ func getSchemaBuilder(params map[string]map[string]string, required map[string][
 	return &builder
 }
 
-func prepareSchema(params map[string]map[string]string, required map[string][]string) (*jsonschema.RootSchema, error) {
-	if len(params) == 0 {
+func prepareSchema(params *utils.DoubleMapString, required map[string][]string) (*jsonschema.RootSchema, error) {
+	if len(*params) == 0 {
 		return nil, nil
 	}
 	schemaData := getSchemaBuilder(params, required)
 	schemaData.WriteString(`{"type":"object","properties":{`)
 	quoteIn := `"`
-	for in, pr := range params {
+	for in, pr := range *params {
 		schemaData.WriteString(quoteIn)
 		quoteIn = `,"`
 		schemaData.WriteString(in)
@@ -133,10 +135,10 @@ func getSchema(pr *openapi3.ParameterRef) (string, error) {
 // AddRoute add routes and initializes the Schemas for the operation
 func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, operation *openapi3.Operation) error {
 	i.Routes = append(i.Routes, route)
-	params := make(map[string]map[string]string)
+	params := make(utils.DoubleMapString)
 	required := make(map[string][]string)
 	routeMeta := i.meta[route]
-	routeMeta.requestParamsNotString = make(map[string]map[string]bool)
+	routeMeta.requestParamsNotString = make(utils.DoubleMapBool)
 
 	for _, parameters := range []openapi3.Parameters{pathParameters, operation.Parameters} {
 		for _, pr := range parameters {
@@ -144,20 +146,14 @@ func (i *Item) AddRoute(route *mux.Route, pathParameters openapi3.Parameters, op
 			if err != nil {
 				return err
 			}
-			if _, ok := params[pr.Value.In]; !ok {
-				params[pr.Value.In] = make(map[string]string)
-			}
-			params[pr.Value.In][pr.Value.Name] = string(schema)
+			params.Set(pr.Value.In, pr.Value.Name, schema)
 			if pr.Value.Required {
 				required[pr.Value.In] = append(required[pr.Value.In], pr.Value.Name)
 			}
-			if _, ok := routeMeta.requestParamsNotString[pr.Value.In]; !ok {
-				routeMeta.requestParamsNotString[pr.Value.In] = make(map[string]bool)
-			}
-			routeMeta.requestParamsNotString[pr.Value.In][pr.Value.Name] = pr.Value.Schema.Value.Type != "string"
+			routeMeta.requestParamsNotString.Set(pr.Value.In, pr.Value.Name, pr.Value.Schema.Value.Type != "string")
 		}
 	}
-	rs, err := prepareSchema(params, required)
+	rs, err := prepareSchema(&params, required)
 	if err != nil {
 		return err
 	}

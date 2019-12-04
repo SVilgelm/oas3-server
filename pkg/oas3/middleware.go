@@ -8,6 +8,7 @@ import (
 	"net/textproto"
 	"strings"
 
+	"github.com/SVilgelm/oas3-server/pkg/utils"
 	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/gorilla/mux"
@@ -102,32 +103,29 @@ func getRealValue(in, name string, r *http.Request, item *Item, route *mux.Route
 	return "", false
 }
 
-func getRealParameters(r *http.Request, item *Item, route *mux.Route) map[string]map[string]*string {
-	valuesCache := make(map[string]map[string]*string)
+func getRealParameters(r *http.Request, item *Item, route *mux.Route) *utils.DoubleMapString {
+	valuesCache := make(utils.DoubleMapString)
 	for in, pr := range item.meta[route].requestParamsNotString {
 		for name := range pr {
 			value, ok := getRealValue(in, name, r, item, route)
 			if !ok {
 				continue
 			}
-			if _, ok := valuesCache[in]; !ok {
-				valuesCache[in] = make(map[string]*string)
-			}
-			valuesCache[in][name] = &value
+			valuesCache.Set(in, name, value)
 		}
 	}
-	return valuesCache
+	return &valuesCache
 }
 
-func getParameterDataBuilder(valuesCache map[string]map[string]*string, item *Item, route *mux.Route) *strings.Builder {
+func getParameterDataBuilder(valuesCache *utils.DoubleMapString, item *Item, route *mux.Route) *strings.Builder {
 	size := 2 // {}
-	if len(valuesCache) > 0 {
-		size += 5*len(valuesCache) + len(valuesCache) - 1 // len(in) * "":{} commas
-		for in, pr := range valuesCache {
+	if len(*valuesCache) > 0 {
+		size += 5*len(*valuesCache) + len(*valuesCache) - 1 // len(in) * "":{} commas
+		for in, pr := range *valuesCache {
 			size += len(in)
 			size += 3*len(pr) + len(pr) - 1 // len(pr) * "": + commas
 			for name, value := range pr {
-				size += len(name) + len(*value)
+				size += len(name) + len(value)
 				if !item.meta[route].requestParamsNotString[in][name] {
 					size += 2 // ""
 				}
@@ -143,32 +141,24 @@ func prepareParametersData(r *http.Request, item *Item, route *mux.Route) []byte
 	valuesCache := getRealParameters(r, item, route)
 	builder := getParameterDataBuilder(valuesCache, item, route)
 
-	firstData := true
 	builder.WriteString(`{`)
-	for in, pr := range valuesCache {
-		if firstData {
-			firstData = false
-			builder.WriteString(`"`)
-		} else {
-			builder.WriteString(`,"`)
-		}
+	dataQuote := `"`
+	for in, pr := range *valuesCache {
+		builder.WriteString(dataQuote)
+		dataQuote = `,"`
 		builder.WriteString(in)
 		builder.WriteString(`":{`)
-		firstIn := true
+		inQuote := `"`
 		for name, value := range pr {
-			if firstIn {
-				firstIn = false
-				builder.WriteString(`"`)
-			} else {
-				builder.WriteString(`,"`)
-			}
+			builder.WriteString(inQuote)
+			inQuote = `,"`
 			builder.WriteString(name)
 			builder.WriteString(`":`)
 			if item.meta[route].requestParamsNotString[in][name] {
-				builder.WriteString(*value)
+				builder.WriteString(value)
 			} else {
 				builder.WriteString(`"`)
-				builder.WriteString(*value)
+				builder.WriteString(value)
 				builder.WriteString(`"`)
 			}
 		}
