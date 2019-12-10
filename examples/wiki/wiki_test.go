@@ -52,7 +52,7 @@ func setupTests() (func(), error) {
 	}
 	baseURL = "http://" + srv.Config.Address + "/"
 	tearDowns = append(tearDowns, func() {
-		srv.Shutdown()
+		_ = srv.Shutdown()
 	})
 	return tearDown, nil
 }
@@ -92,6 +92,7 @@ func TestModel(t *testing.T) {
 	assert.NoError(t, err)
 	resp, err = http.DefaultClient.Do(req)
 	assert.NoError(t, err)
+	t.Logf("Resp %+v", resp)
 	assert.Equal(t, http.StatusUnsupportedMediaType, resp.StatusCode)
 }
 

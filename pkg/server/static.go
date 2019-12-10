@@ -28,6 +28,9 @@ func (fs FileSystem) Open(path string) (http.File, error) {
 	}
 
 	s, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
 	if s.IsDir() {
 		path = path + "/index.html"
 		return fs.fs.Open(path)

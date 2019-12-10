@@ -9,7 +9,8 @@ import (
 func TestConfigInitEmpty(t *testing.T) {
 	t.Parallel()
 	cfg := Config{}
-	cfg.init()
+	err := cfg.init()
+	assert.NoError(t, err)
 
 	assert.Empty(t, cfg.OAS3)
 	assert.Nil(t, cfg.Model)

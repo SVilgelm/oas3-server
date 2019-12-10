@@ -7,8 +7,9 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/SVilgelm/oas3-server/pkg/oas3"
 	"github.com/ghodss/yaml"
+
+	"github.com/SVilgelm/oas3-server/pkg/oas3"
 )
 
 // Config is a main cofing

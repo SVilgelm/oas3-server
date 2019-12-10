@@ -47,7 +47,6 @@ func Model(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -55,7 +54,10 @@ func Model(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", contentType+"; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		log.Print(err)
+		return
+	}
 }
 
 // Console returns the OAS3 Developer console
@@ -67,8 +69,10 @@ func Console(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
-	w.Write(data)
+	if _, err := w.Write(data); err != nil {
+		log.Print(err)
+		return
+	}
 }

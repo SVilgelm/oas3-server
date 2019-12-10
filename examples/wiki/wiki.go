@@ -41,7 +41,7 @@ func loadPage(title string) (*Page, error) {
 }
 
 func noescape(str string) template.HTML {
-	return template.HTML(str)
+	return template.HTML(str) //nolint:gosec
 }
 
 var fn = template.FuncMap{
@@ -104,7 +104,10 @@ func listHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("content-type", "application/json; charset=utf-8")
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -167,11 +170,11 @@ func initServer() (*server.Server, error) {
 	if err != nil {
 		return nil, err
 	}
-	srv.HandleFunc("wiki.list", listHandler)
-	srv.HandleFunc("wiki.create", createHandler)
-	srv.HandleFunc("wiki.edit", editHandler)
-	srv.HandleFunc("wiki.save", saveHandler)
-	srv.HandleFunc("wiki.view", viewHandler)
+	_ = srv.HandleFunc("wiki.list", listHandler)
+	_ = srv.HandleFunc("wiki.create", createHandler)
+	_ = srv.HandleFunc("wiki.edit", editHandler)
+	_ = srv.HandleFunc("wiki.save", saveHandler)
+	_ = srv.HandleFunc("wiki.view", viewHandler)
 	return srv, nil
 }
 
