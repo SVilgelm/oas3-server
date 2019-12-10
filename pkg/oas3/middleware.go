@@ -8,8 +8,9 @@ import (
 	"net/textproto"
 	"strings"
 
-	"github.com/SVilgelm/oas3-server/pkg/utils"
 	"github.com/getkin/kin-openapi/openapi3"
+
+	"github.com/SVilgelm/oas3-server/pkg/utils"
 
 	"github.com/gorilla/mux"
 )
@@ -33,7 +34,9 @@ func (w *response) send() {
 		w.statusCode = 200
 	}
 	w.ResponseWriter.WriteHeader(w.statusCode)
-	w.ResponseWriter.Write(w.buf.Bytes())
+	if _, err := w.ResponseWriter.Write(w.buf.Bytes()); err != nil {
+		log.Print(err)
+	}
 }
 
 func processValues(param *openapi3.Parameter, values []string) string {
@@ -183,33 +186,50 @@ func validateRequest(r *http.Request, item *Item, route *mux.Route) error {
 	return nil
 }
 
+type MiddlewareHandler struct {
+	doRequestValidation  bool
+	doResponseValidation bool
+	mapper               *Mapper
+	next                 http.Handler
+}
+
+func (m *MiddlewareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	route := mux.CurrentRoute(r)
+	item := m.mapper.ByRoute(route)
+	if item == nil {
+		m.next.ServeHTTP(w, r)
+		return
+	}
+
+	ctx := WithOperation(r.Context(), item)
+	r = r.WithContext(ctx)
+	if m.doRequestValidation {
+		if err := validateRequest(r, item, route); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+	}
+	if m.doResponseValidation {
+		rw := response{
+			ResponseWriter: w,
+			buf:            new(bytes.Buffer),
+		}
+		m.next.ServeHTTP(&rw, r)
+		rw.send()
+	} else {
+		m.next.ServeHTTP(w, r)
+	}
+}
+
 // Middleware puts the model into the current context and run validations
 func Middleware(mapper *Mapper, doRequestValidation, doResponseValidation bool) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			route := mux.CurrentRoute(r)
-			item := mapper.ByRoute(route)
-			if item != nil && doRequestValidation {
-				if err := validateRequest(r, item, route); err != nil {
-					http.Error(w, err.Error(), http.StatusBadRequest)
-					return
-				}
-			}
-
-			ctx := WithOperation(r.Context(), item)
-			r = r.WithContext(ctx)
-			if item != nil && doResponseValidation {
-				log.Println("Validating response")
-
-				rw := response{
-					ResponseWriter: w,
-					buf:            new(bytes.Buffer),
-				}
-				next.ServeHTTP(&rw, r)
-				rw.send()
-			} else {
-				next.ServeHTTP(w, r)
-			}
-		})
+		m := MiddlewareHandler{
+			doRequestValidation:  doRequestValidation,
+			doResponseValidation: doResponseValidation,
+			mapper:               mapper,
+			next:                 next,
+		}
+		return &m
 	}
 }

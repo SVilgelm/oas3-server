@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/SVilgelm/oas3-server/pkg/oas3"
 	"github.com/gorilla/mux"
+
+	"github.com/SVilgelm/oas3-server/pkg/oas3"
 )
 
 type statusWriter struct {
@@ -36,7 +37,7 @@ func LogHTTP(mapper *oas3.Mapper) mux.MiddlewareFunc {
 			start := time.Now()
 			sw := statusWriter{ResponseWriter: w}
 			defer func() {
-				duration := time.Now().Sub(start)
+				duration := time.Since(start)
 				route := mux.CurrentRoute(r)
 				op := mapper.ByRoute(route)
 				log.Println(

@@ -11,9 +11,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gorilla/mux"
+
 	"github.com/SVilgelm/oas3-server/pkg/config"
 	"github.com/SVilgelm/oas3-server/pkg/oas3"
-	"github.com/gorilla/mux"
 )
 
 // Server is a OpenAPI 3 Specification Web Server
@@ -28,7 +29,7 @@ type Server struct {
 func (s *Server) HandleFunc(operationID string, handler http.HandlerFunc) error {
 	item := s.mapper.ByID(operationID)
 	if item == nil {
-		return fmt.Errorf("The operation '%s' not found", operationID)
+		return fmt.Errorf("the operation '%s' not found", operationID)
 	}
 	log.Printf("Linking new handler for the operation '%s'", operationID)
 	for _, route := range item.Routes {
@@ -41,7 +42,7 @@ func (s *Server) HandleFunc(operationID string, handler http.HandlerFunc) error 
 func (s *Server) Handle(operationID string, handler http.Handler) error {
 	item := s.mapper.ByID(operationID)
 	if item == nil {
-		return fmt.Errorf("The operation '%s' not found", operationID)
+		return fmt.Errorf("the operation '%s' not found", operationID)
 	}
 	log.Printf("Linking new handler for the operation '%s'", operationID)
 	for _, route := range item.Routes {
@@ -99,7 +100,7 @@ func (s *Server) Start() error {
 
 // Serve starts Server
 func (s *Server) Serve() error {
-	var gracefulStop = make(chan os.Signal)
+	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
 	signal.Notify(gracefulStop, syscall.SIGINT)
 
@@ -136,11 +137,11 @@ func NewServer(cfg *config.Config) (*Server, error) {
 		srv.Config.Validate.Request,
 		srv.Config.Validate.Response,
 	))
-	srv.HandleFunc("oas3.model", oas3.Model)
-	srv.HandleFunc("oas3.console", oas3.Console)
+	_ = srv.HandleFunc("oas3.model", oas3.Model)
+	_ = srv.HandleFunc("oas3.console", oas3.Console)
 	if _, err := os.Stat(cfg.Static); !os.IsNotExist(err) {
 		fileServer := http.FileServer(FileSystem{http.Dir(cfg.Static)})
-		srv.Handle("static", fileServer)
+		_ = srv.Handle("static", fileServer)
 	}
 
 	return &srv, nil

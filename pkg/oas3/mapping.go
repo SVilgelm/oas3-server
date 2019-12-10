@@ -251,7 +251,7 @@ func processOperation(
 		return nil
 	}
 	if pathOperation.OperationID == "" {
-		log.Printf("No operationID for path '%s' and method '%s', skiped", path, httpMethod)
+		log.Printf("No operationID for path '%s' and method '%s', skipped", path, httpMethod)
 		return nil
 	}
 	item := mapper.ByID(pathOperation.OperationID)
@@ -299,7 +299,7 @@ func RegisterOperations(model *openapi3.Swagger, router *mux.Router) (*Mapper, e
 	}
 	for path, meta := range model.Paths {
 		if meta == nil {
-			log.Printf("Wrong path '%s' definition, skiped", path)
+			log.Printf("Wrong path '%s' definition, skipped", path)
 			continue
 		}
 		for _, httpMethod := range allMethods {
