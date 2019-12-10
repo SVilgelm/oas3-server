@@ -10,7 +10,7 @@ on:
       - master
       - v*
 jobs:
-  style:
+  tests:
     strategy:
       matrix:
         go-version: [1.13.x]
@@ -23,26 +23,29 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v1
-      - name: Run gofmt
+      - name: gofmt
         run: diff -u <(echo -n) <(gofmt -d -s .)
-      - name: Run go vet
+      - name: go vet
         run: go vet ./...
-      - name: Install golint
-        run: go get -u golang.org/x/lint/golint
-      - name: Run golint
-        run: ~/go/bin/golint -set_exit_status ./...
-      - name: Install misspell
-        run: go get -u github.com/client9/misspell/cmd/misspell
-      - name: Run misspell
-        run: ~/go/bin/misspell -error $(find . -name "*.go")
-  unit-tests:
-    strategy:
-      matrix:
-        go-version: [1.13.x]
-        platform: [ubuntu-latest]
-    runs-on: ${{ matrix.platform }}
+      - name: misspell
+        run: |
+          go get -u github.com/client9/misspell/cmd/misspell
+          ~/go/bin/misspell -error $(find . -name "*.go")
+      - name: golint
+        run: |
+          go get -u golang.org/x/lint/golint
+          ~/go/bin/golint -set_exit_status ./...
+      - name: unittests
+        run: go test -race ./...
+  sonar:
+    needs: tests
     env:
       SONAR_VERSION: 4.2.0.1873
+    strategy:
+      matrix:
+        go-version: [1.13.x]
+        platform: [ubuntu-latest]
+    runs-on: ${{ matrix.platform }}
     steps:
       - name: Install Go
         uses: actions/setup-go@v1
@@ -50,10 +53,14 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - name: Checkout code
         uses: actions/checkout@v1
-      - name: Run unittests
+      - name: go vet
+        run: go vet ./... > vet-report.out
+      - name: golint
         run: |
-          set -o pipefail
-          go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... | tee test-report.out
+          go get -u golang.org/x/lint/golint
+          ~/go/bin/golint ./... > lint-report.out
+      - name: unittests
+        run: go test -cover -coverprofile=coverage.out -covermode=atomic -json ./... > test-report.out
       - name: Cache Sonar Scanner Client
         id: cache-sonar
         uses: actions/cache@v1
@@ -68,7 +75,7 @@ jobs:
           mv sonar-scanner* sonar
           rm sonar.zip
       - name: Run sonarqube
-        run: sonar/bin/sonar-scanner -X
+        run: sonar/bin/sonar-scanner
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_LOGIN }}
